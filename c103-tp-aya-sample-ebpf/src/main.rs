@@ -3,7 +3,8 @@
 
 use aya_bpf::{
     bindings::{TC_ACT_SHOT, TC_ACT_UNSPEC},
-    macros::classifier,
+    macros::{classifier, map},
+    maps::{LpmTrie, lpm_trie::Key},
     programs::TcContext,
 };
 use aya_log_ebpf::info;
@@ -11,6 +12,9 @@ use network_types::{
     eth::{EthHdr, EtherType},
     ip::{IpProto, Ipv4Hdr},
 };
+
+#[map]
+static RULE_TRIE: LpmTrie<u32, u32> = LpmTrie::with_max_entries(1024, 0);
 
 #[classifier]
 pub fn c103_tp_aya_sample(ctx: TcContext) -> i32 {
@@ -31,11 +35,11 @@ fn try_c103_tp_aya_sample(ctx: TcContext) -> Result<i32, i32> {
     if ipv4hdr.proto != IpProto::Icmp {
         return Ok(TC_ACT_UNSPEC);
     }
-    // ICMP のパケットのうち、宛先が 93.184.216.34 のものはドロップする
-    if ipv4hdr.dst_addr.to_be() == 0x5db8d822 {
-        info!(&ctx, "ICMP packet to 93.184.216.34 is dropped");
-        return Ok(TC_ACT_SHOT);
-    }
+    // ICMP のパケットのうち、宛先が RULE_TRIE に入っているものはドロップする
+    if let Some(v) = RULE_TRIE.get(&Key::new(32, ipv4hdr.dst_addr)){
+        if *v != 0 { info!(&ctx, "matched, allowed"); } else {
+            info!(&ctx, "matched, dropped"); return Ok(TC_ACT_SHOT)
+        } } else { info!(&ctx, "not matched"); }
     Ok(TC_ACT_UNSPEC)
 }
 
