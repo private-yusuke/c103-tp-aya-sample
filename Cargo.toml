@@ -1,0 +1,2 @@
+[workspace]
+members = ["xtask", "c103-tp-aya-sample", "c103-tp-aya-sample-common"]

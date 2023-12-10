@@ -1,0 +1,3 @@
+{
+  "rust-analyzer.linkedProjects": ["Cargo.toml", "c103-tp-aya-sample-ebpf/Cargo.toml"]
+}
