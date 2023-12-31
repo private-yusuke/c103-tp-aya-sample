@@ -4,7 +4,7 @@
 use aya_bpf::{
     bindings::{TC_ACT_SHOT, TC_ACT_UNSPEC},
     macros::{classifier, map},
-    maps::{LpmTrie, lpm_trie::Key},
+    maps::{lpm_trie::Key, LpmTrie},
     programs::TcContext,
 };
 use aya_log_ebpf::info;
@@ -36,10 +36,16 @@ fn try_c103_tp_aya_sample(ctx: TcContext) -> Result<i32, i32> {
         return Ok(TC_ACT_UNSPEC);
     }
     // ICMP のパケットのうち、宛先が RULE_TRIE に入っているものはドロップする
-    if let Some(v) = RULE_TRIE.get(&Key::new(32, ipv4hdr.dst_addr)){
-        if *v != 0 { info!(&ctx, "matched, allowed"); } else {
-            info!(&ctx, "matched, dropped"); return Ok(TC_ACT_SHOT)
-        } } else { info!(&ctx, "not matched"); }
+    if let Some(v) = RULE_TRIE.get(&Key::new(32, ipv4hdr.dst_addr)) {
+        if *v != 0 {
+            info!(&ctx, "matched, allowed");
+        } else {
+            info!(&ctx, "matched, dropped");
+            return Ok(TC_ACT_SHOT);
+        }
+    } else {
+        info!(&ctx, "not matched");
+    }
     Ok(TC_ACT_UNSPEC)
 }
 

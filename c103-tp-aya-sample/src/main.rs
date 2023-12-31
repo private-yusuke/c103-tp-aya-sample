@@ -1,11 +1,11 @@
 use anyhow::Context;
-use aya::maps::LpmTrie;
 use aya::maps::lpm_trie::Key;
+use aya::maps::LpmTrie;
 use aya::programs::{tc, SchedClassifier, TcAttachType};
 use aya::{include_bytes_aligned, Bpf};
 use aya_log::BpfLogger;
 use clap::Parser;
-use log::{info, warn, debug};
+use log::{debug, info, warn};
 use tokio::signal;
 
 #[derive(Debug, Parser)]
@@ -50,18 +50,24 @@ async fn main() -> Result<(), anyhow::Error> {
     // error adding clsact to the interface if it is already added is harmless
     // the full cleanup can be done with 'sudo tc qdisc del dev eth0 clsact'.
     let _ = tc::qdisc_add_clsact(&opt.iface);
-    let program: &mut SchedClassifier = bpf.program_mut("c103_tp_aya_sample").unwrap().try_into()?;
+    let program: &mut SchedClassifier =
+        bpf.program_mut("c103_tp_aya_sample").unwrap().try_into()?;
     program.load()?;
     program.attach(&opt.iface, TcAttachType::Egress)?;
 
     let mut rule_trie = LpmTrie::try_from(
         bpf.take_map("RULE_TRIE")
-            .context("failed to get RULE_TRIE")?)?;
+            .context("failed to get RULE_TRIE")?,
+    )?;
 
     // 1.0.0.0/8 への ping を許可
-    rule_trie.insert(&Key::new(8, 0x01000000u32.to_be()), 1u32, 0).context("insert failed")?;
+    rule_trie
+        .insert(&Key::new(8, 0x01000000u32.to_be()), 1u32, 0)
+        .context("insert failed")?;
     // 8.0.0.0/8 への ping を禁止
-    rule_trie.insert(&Key::new(8, 0x08000000u32.to_be()), 0u32, 0).context("insert failed")?;
+    rule_trie
+        .insert(&Key::new(8, 0x08000000u32.to_be()), 0u32, 0)
+        .context("insert failed")?;
 
     info!("Waiting for Ctrl-C...");
     signal::ctrl_c().await?;
