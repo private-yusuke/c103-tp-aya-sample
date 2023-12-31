@@ -1,5 +1,7 @@
 # c103-tp-aya-sample
 
+コミックマーケット103で参加するサークル「[御茶会と愉快な仲間たち](RustとeBPFでパケットをフィルタしてみよう)」のAriake Tea Party内記事「RustとeBPFでパケットをフィルタしてみよう」で登場するコードを掲載したリポジトリです。
+
 ## Prerequisites
 
 1. Install bpf-linker: `cargo install bpf-linker`
